@@ -2,6 +2,20 @@ const express = require('express');
 const bcrypt = require("bcrypt-nodejs");
 const app = express();
 const cors = require('cors');
+const knex = require('knex');
+
+const db = knex({
+	client: 'pg',
+	connection: {
+		host: '127.0.0.1',
+		port: '5432',
+		user: 'abrahambriones',
+		password: '',
+		database: 'smart-brain'
+	}
+});
+
+db.select('*').from('users');
 
 /*
  Middleware necessary to read the incoming body of a JSON object.
@@ -55,7 +69,11 @@ const database = {
  * Create the root of the page that responds with a JSON of the current users stored in the database.
  */
 app.get('/', (req, response) => {
-	response.json(database.users)
+	db('users')
+		.returning('*')
+		.then(rows => {
+			response.json(rows)
+		})
 })
 
 
@@ -66,11 +84,26 @@ app.get('/', (req, response) => {
  * If the incoming JSON matches user information existing in the database, the sign in is successful.
  */
 app.post('/sign-in', (req, res) => {
-	if (req.body["email"] === database.users[0]["email"] && req.body["password"] === database.users[0]["password"]) {
-		res.json(database.users[0])
-	} else {
-		res.status(400).json('Your password or username is incorrect.')
-	}
+	const { email, password } = req.body;
+
+	db.select('hash')
+		.from('login')
+		.where('email', email)
+		.then( (data) => {
+			const isValid = bcrypt.compareSync(password, data[0].hash)
+			if (isValid) {
+				db.select('*')
+					.from('users')
+					.where('email', email)
+					.then(user => {
+						res.json(user[0])
+					})
+					.catch(error => res.status(400).json("Unable to get user."))
+			}
+			else {
+				res.status(400).json("Wrong username or password.")
+			}
+		})
 })
 
 /**
@@ -78,16 +111,35 @@ app.post('/sign-in', (req, res) => {
  * Create the register root that will create a new user. It returns the new user's info.
  */
 app.post('/register', (req, res) => {
-	const { email, name, password } = req.body;
-	database.users.push({
-		id: '125',
-		name: name,
-		email: email,
-		password: password,
-		entries: 0,
-		joined: new Date()
+	const {email, name, password} = req.body;
+	const hash = bcrypt.hashSync(password);
+
+	db.transaction((trx) => {
+		trx.insert({
+			email: email,
+			hash: hash
+		})
+			.into('login')
+			.returning('email')
+			.then(loginEmail => {
+				return trx('users')
+					.returning('*')
+					.insert({
+						email: loginEmail[0].email,
+						name: name,
+						joined_on: new Date(),
+					})
+					// Successful response - only send the user
+					.then(user => {
+						res.json(user[0])
+					})
+					// Error response
+					.catch(error => res.status(400).json('Unable to register.'))
+			})
+			.then(trx.commit)
+			.then(trx.rollback)
 	})
-	res.json(database.users[database.users.length - 1])
+		.catch(error => res.status(400).json("Unable to register."))
 })
 
 /**
@@ -96,19 +148,19 @@ app.post('/register', (req, res) => {
  * It will have a "userId" parameter.
  */
 app.get('/profile/:id', (req, res) => {
-	const { id } = req.params;
-	let userExists = false;
-	database.users.forEach(user => {
-		if (user.id === id) {
-			userExists = true;
-			return res.json(user)
-		}
-	})
-	if (!userExists) {
-		res.status(400).json("No such user exists.")
-	}
+	const {id} = req.params;
+	db.select('*')
+		.from('users')
+		.where('id', id)
+		.returning('*')
+		.then((user) => {
+			if (user.length) {
+				res.json(user[0])
+			} else {
+				res.status(400).json('User not found')
+			}
+		})
 })
-
 
 /**
  * PUT (/image)
@@ -116,18 +168,14 @@ app.get('/profile/:id', (req, res) => {
  * to the page.
  */
 app.put('/image', (req, res) => {
-	const { id } = req.body;
-	let userExists = false;
-	database.users.forEach(user => {
-		if (user.id === id) {
-			userExists = true;
-			user.entries++;
-			return res.json(user.entries)
-		}
-	})
-	if (!userExists) {
-		res.status(400).json("No such user exists.")
-	}
+	const {id} = req.body;
+	db.from('users')
+		.where('id', id)
+		.increment('entries', 1)
+		.returning('entries')
+		.then(entries => res.json(entries[0]))
+		.catch(error => res.status(400).json("Unable to get entries."))
+
 })
 
 
