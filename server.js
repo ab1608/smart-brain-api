@@ -73,12 +73,13 @@ app.use(cors());
  * (/)
  * Create the root of the page that responds with a JSON of the current users stored in the database.
  */
-app.get('/', (req, response) => {
-	db('users')
-		.returning('*')
-		.then(rows => {
-			response.json(rows)
-		})
+app.get('/', (req, res) => {
+	// db('users')
+	// 	.returning('*')
+	// 	.then(rows => {
+	// 		response.json(rows)
+	// 	})
+	res.json("it is working")
 })
 
 /**
