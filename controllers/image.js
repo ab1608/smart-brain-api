@@ -1,8 +1,9 @@
 const Clarifai = require('clarifai');
-const clari_key = require('../clari_key.js')
+// const clari_key = require('../clari_key.js')
 
+const CLARI_KEY = process.env.CLARI_KEY;
 const app = new Clarifai.App({
-	apiKey: clari_key.key
+	apiKey: CLARI_KEY
 })
 
 
