@@ -7,6 +7,10 @@
 const handleSignIn = (req, res, db, bcrypt) => {
 	const { email, password } = req.body;
 
+	// if(!email || !password) {
+	// 	return res.status(400).json("Please fill out fields.")
+	// }
+
 	db.select('hash')
 		.from('login')
 		.where('email', email)
@@ -29,5 +33,7 @@ const handleSignIn = (req, res, db, bcrypt) => {
 
 
 module.exports = {
-	handleSignIn: handleSignIn
+	handleSignIn: handleSignIn,
+	target: 'web',
+	mode: 'development'
 }
