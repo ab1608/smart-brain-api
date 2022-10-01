@@ -3,6 +3,11 @@ const bcrypt = require("bcrypt-nodejs");
 const app = express();
 const cors = require('cors');
 const knex = require('knex');
+const register = require("./controllers/register");
+const signIn = require("./controllers/sign-in");
+const image = require("./controllers/image");
+const profile = require("./controllers/profile");
+
 
 const db = knex({
 	client: 'pg',
@@ -42,26 +47,26 @@ app.use(cors());
 
 
 // Create an object to represent a database. Each user is an object of key:value pairs stored in the users array.
-const database = {
-	users: [
-		{
-			id: '123',
-			name: 'John',
-			email: 'john@gmail.com',
-			password: 'cookies',
-			entries: 0,
-			joined: new Date()
-		},
-		{
-			id: '124',
-			name: 'Sally',
-			email: 'sally@gmail.com',
-			password: 'candy',
-			entries: 0,
-			joined: new Date()
-		}
-	]
-}
+// const database = {
+// 	users: [
+// 		{
+// 			id: '123',
+// 			name: 'John',
+// 			email: 'john@gmail.com',
+// 			password: 'cookies',
+// 			entries: 0,
+// 			joined: new Date()
+// 		},
+// 		{
+// 			id: '124',
+// 			name: 'Sally',
+// 			email: 'sally@gmail.com',
+// 			password: 'candy',
+// 			entries: 0,
+// 			joined: new Date()
+// 		}
+// 	]
+// }
 
 
 /**
@@ -76,7 +81,6 @@ app.get('/', (req, response) => {
 		})
 })
 
-
 /**
  * POST (/sign-in)
  * Create the sign-in route that responds with a success or fail message.
@@ -84,26 +88,7 @@ app.get('/', (req, response) => {
  * If the incoming JSON matches user information existing in the database, the sign in is successful.
  */
 app.post('/sign-in', (req, res) => {
-	const { email, password } = req.body;
-
-	db.select('hash')
-		.from('login')
-		.where('email', email)
-		.then( (data) => {
-			const isValid = bcrypt.compareSync(password, data[0].hash)
-			if (isValid) {
-				db.select('*')
-					.from('users')
-					.where('email', email)
-					.then(user => {
-						res.json(user[0])
-					})
-					.catch(error => res.status(400).json("Unable to get user."))
-			}
-			else {
-				res.status(400).json("Wrong username or password.")
-			}
-		})
+	signIn.handleSignIn(req, res, db, bcrypt)
 })
 
 /**
@@ -111,36 +96,8 @@ app.post('/sign-in', (req, res) => {
  * Create the register root that will create a new user. It returns the new user's info.
  */
 app.post('/register', (req, res) => {
-	const {email, name, password} = req.body;
-	const hash = bcrypt.hashSync(password);
-
-	db.transaction((trx) => {
-		trx.insert({
-			email: email,
-			hash: hash
-		})
-			.into('login')
-			.returning('email')
-			.then(loginEmail => {
-				return trx('users')
-					.returning('*')
-					.insert({
-						email: loginEmail[0].email,
-						name: name,
-						joined_on: new Date(),
-					})
-					// Successful response - only send the user
-					.then(user => {
-						res.json(user[0])
-					})
-					// Error response
-					.catch(error => res.status(400).json('Unable to register.'))
-			})
-			.then(trx.commit)
-			.then(trx.rollback)
-	})
-		.catch(error => res.status(400).json("Unable to register."))
-})
+	register.handleRegister(req, res, db, bcrypt)
+});
 
 /**
  * GET (profile/:userId)
@@ -148,18 +105,7 @@ app.post('/register', (req, res) => {
  * It will have a "userId" parameter.
  */
 app.get('/profile/:id', (req, res) => {
-	const {id} = req.params;
-	db.select('*')
-		.from('users')
-		.where('id', id)
-		.returning('*')
-		.then((user) => {
-			if (user.length) {
-				res.json(user[0])
-			} else {
-				res.status(400).json('User not found')
-			}
-		})
+	profile.handleProfile(req, res, db)
 })
 
 /**
@@ -168,14 +114,7 @@ app.get('/profile/:id', (req, res) => {
  * to the page.
  */
 app.put('/image', (req, res) => {
-	const {id} = req.body;
-	db.from('users')
-		.where('id', id)
-		.increment('entries', 1)
-		.returning('entries')
-		.then(entries => res.json(entries[0].entries))
-		.catch(error => res.status(400).json("Unable to get entries."))
-
+	image.handleImage(req, res, db)
 })
 
 
