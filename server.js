@@ -3,10 +3,10 @@ const bcrypt = require("bcrypt-nodejs");
 const app = express();
 const cors = require('cors');
 const knex = require('knex');
-const register = require("./controllers/register");
-const signIn = require("./controllers/sign-in");
-const image = require("./controllers/image");
-const profile = require("./controllers/profile");
+const register = require("./controllers/register.js");
+const signIn = require("./controllers/sign-in.js");
+const image = require("./controllers/image.js");
+const profile = require("./controllers/profile.js");
 
 
 const db = knex({
@@ -115,6 +115,10 @@ app.get('/profile/:id', (req, res) => {
  */
 app.put('/image', (req, res) => {
 	image.handleImage(req, res, db)
+})
+
+app.post('/imageurl', (req, res) => {
+	image.handleAPIcall(req, res)
 })
 
 
