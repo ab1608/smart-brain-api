@@ -12,11 +12,10 @@ const profile = require("./controllers/profile.js");
 const db = knex({
 	client: 'pg',
 	connection: {
-		host: 'postgresql-spherical-00582',
-		port: '5432',
-		user: 'abrahambriones',
-		password: '',
-		database: 'smart-brain'
+		host: process.env.DATABASE_URL,
+		ssl: {
+			rejectUnauthorized: false
+		}
 	}
 });
 

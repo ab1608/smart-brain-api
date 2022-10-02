@@ -40,6 +40,4 @@ const handleRegister = (req, res, db, bcrypt) => {
 
 module.exports = {
 	handleRegister: handleRegister,
-	target: 'web',
-	mode: 'development'
 }
