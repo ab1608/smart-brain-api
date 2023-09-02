@@ -4,3 +4,7 @@ smart-brain-api.iml
 
 # Secret files
 clari_key.js
+
+# Miscellaneous
+.DS_Store
+
