@@ -1,0 +1,6 @@
+# IDE files
+.idea
+smart-brain-api.iml
+
+# Secret files
+clari_key.js
